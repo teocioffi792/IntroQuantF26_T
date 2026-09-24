@@ -1,6 +1,6 @@
 ---
 title: "IntroR_FirstGGplot"
-author: "Dr. Amy King-Henry"
+author: "Teo Cioffi"
 last modified: "Sept 2, 2026"
 format: html
 editor: visual
