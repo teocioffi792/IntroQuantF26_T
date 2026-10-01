@@ -163,6 +163,8 @@ chocolate_bar <- ggplot(candy_rankings) + aes(x = chocolate) + geom_bar()
 Challenge: In the chunk below, plot a different variable, [without copying and pasting the script you wrote before]{.underline}.
 
 ```{r}
+ggplot(candy_rankings) +
+  aes( x = nougat) + geom_bar()
 
 ```
 
@@ -228,21 +230,24 @@ You can change the color in the geom argument. Test out how it works on differen
 
 ```{r}
 ggplot(candy_rankings) +  
-  aes(x = fruit, y = pricepercent) + 
-  geom_bar(color = 'red', fill = 'red') 
+  aes(x = fruit) + 
+  geom_bar(color = 'red', fill = 'blue') 
 ```
 
 If you want the color to reflect another variable, for example, if there is fruit in the candy too, then you make it a **mapped aesthetic**, or one that refers to some data to assign a visual. In this case, you place the **color** or **fill** argument **inside aes().**
 
 ```{r}
-ggplot() +  
-  aes(x = , fill = ) + 
-  geom_bar(position = ) 
+ggplot(candy_rankings) +  
+  aes(x = chocolate, fill = fruity) + 
+  geom_bar(position = position_dodge()) 
 ```
 
 ### Challenge question: what proportion of candies have BOTH chocolate and caramel?
 
 ```{r}
+ggplot(candy_rankings) +  
+  aes(x = chocolate, fill = caramel) + 
+  geom_bar(position = position_dodge()) 
 
 ```
 
@@ -251,17 +256,18 @@ ggplot() +
 Working on a scatterplot and want the points to be different shapes? Easy too!
 
 ```{r}
-ggplot() +
-  aes(x = ,
-      y = ) +
-  geom_point()
+ggplot(candy_rankings) +
+  aes(x = pricepercent,
+      y = winpercent) +
+  geom_point(shape = 8)
 ```
 
 Similarly, you can **map** shape to a variable in the aes() function.
 
 ```{r}
-ggplot() +
-  aes() +
+ggplot(candy_rankings) +
+  aes(x = pricepercent, y = winpercent, shape = chocolate) +
+  geom_point()
   
 ```
 
@@ -270,23 +276,26 @@ ggplot() +
 Pretty self-explanatory here. labs() are added separately from the other plot parameters.
 
 ```{r}
-ggplot() +
-  aes(
-  labs(x = 
-       y =
-       title = ,
-       subtitle = 
-       caption =
+ggplot(candy_rankings) +
+  aes(x = sugarpercent, y = winpercent) +
+  labs(
+       y = "Sugar Percent",
+       title = "Win Percent",
+       subtitle = "For galloween Candies",
+       caption = "X"
+  )
 
 ```
 
 ### X and Y axis limits
 
 ```{r}
-ggplot() +
-  aes(x = , 
-      y = =) +
+ggplot(candy_rankings) +
+  aes(x = sugarpercent, 
+      y = winpercent) +
   geom_point() +
+  xlim(0,1.1) +
+  ylim(0,100)
 
 ```
 

@@ -469,6 +469,9 @@ Q1: Make a line graph that depicts the number of visitors per year for only Yose
 Q2: Make a boxplot that compares visitation rates in all parks in 1980 to present.
 
 ```{r}
+ggplot(df5) +
+  aes(x = Code, y = kVis)
+
 
 ```
 
