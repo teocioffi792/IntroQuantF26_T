@@ -44,6 +44,7 @@ summary() : min, 1st quartile, median, mean, 3rd quartile, max
 ```{r}
 load(file = "Demo Data Files/CCdata_tidy.Rdata")
 install.packages("car")
+install.packages("tidyverse")
 library(tidyverse)
 ```
 

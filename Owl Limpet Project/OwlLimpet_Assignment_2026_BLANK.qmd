@@ -98,7 +98,7 @@ THINKING QUESTIONS: Do we have the number of transects that we expect to in our 
 
 ANSWER: Our methods have been a little inconsistent. We used different methods at Shaws Cove and Heisler than we did at Treasure Cove. At Treasure Cove, we have used 5 meter long set length transects. At Shaws Cove and Heisler, we ran transects of variable length from the high tide line to the lowest accessible part of the intertidal. At both sites limpets were measured one meter from the tape on either side. In order to compare population density, we will need to eventually divide by transect length/area to get limpets per square meter.
 
-#### 1.3 Make two more graphs of your choosing to explore the data based on some other columns. Write a sentence under each that explains what your graph shows. 
+#### 1.3 Make two more graphs of your choosing to explore the data based on some other columns. Write a sentence under each that explains what your graph shows.
 
 Graph 1:
 
@@ -223,7 +223,7 @@ T-Test assumptions (for a Student's T-test)
 
 - Is the distribution of the model residuals approximately normal?
 
-#### 2.5 What is the sample size (of transects) for each site/year for our study of limpet population density? 
+#### 2.5 What is the sample size (of transects) for each site/year for our study of limpet population density?
 
 Is it roughly the same so that we can compare? Is it enough to run a statistical test?
 
@@ -231,7 +231,7 @@ Is it roughly the same so that we can compare? Is it enough to run a statistical
 Limpet_Density |> 
 ```
 
-#### 2.6. Does average number of owl limpets per square meter differ significantly between Heisler Park and Shaws Cove? 
+#### 2.6. Does average number of owl limpets per square meter differ significantly between Heisler Park and Shaws Cove?
 
 Filter the data to only include those sites before putting it into the `t.test()` function. These are a good comparison because they were measured in the same year with the same survey methods.
 
@@ -256,7 +256,7 @@ t.test(    )
 
 Since there was no difference in means, we'll ignore year at Treasure Cove from now on and just pool our data to make it easier for ourselves.
 
-#### 2.8 EXTRA CREDIT:  Do an ANOVA comparing Shaws, Heisler, and Treasure Cove 2025 density data (exclude 2023 so that the sample size is similar between all three). Use a Tukey post-hoc test. Explain the results. 
+#### 2.8 EXTRA CREDIT: Do an ANOVA comparing Shaws, Heisler, and Treasure Cove 2025 density data (exclude 2023 so that the sample size is similar between all three). Use a Tukey post-hoc test. Explain the results.
 
 ```{r}
 
@@ -363,7 +363,7 @@ If you would like to test whether size differs by predicted human impact, at CDM
 
 ```
 
-#### 3.6. MORE EXTRA CREDIT: conduct an ANOVA to test for differences in shell length between all four sites. Show your tests for all assumptions and make a graph. 
+#### 3.6. MORE EXTRA CREDIT: conduct an ANOVA to test for differences in shell length between all four sites. Show your tests for all assumptions and make a graph.
 
 ```{r}
 

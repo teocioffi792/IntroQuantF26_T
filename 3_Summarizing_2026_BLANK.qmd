@@ -50,32 +50,31 @@ library(tidyverse)
 ### Example using summarize to make a nice summary table of some old owl limpet data:
 
 ```{r}
-Size_summary <-  %>% 
-  group_by() 
-  summarize(), # mean 
-            sd_size = ,  # standard deviation
-            n = , # count
-            se_size =  # standard error
-  mutate_at(), # bonus line to reduce digits
-            .funs = ) 
-
-Size_summary %>% 
-  select() 
-  knitr
+  Size_summary <- CCdata_tidy %>% 
+    group_by(Impact, Year, Season, Survey_Date) %>%
+    summarize(mean_size = mean(Size, na.rm = TRUE), # mean 
+              sd_size = sd(Size, na.rm = TRUE),  # standard deviation
+              n = n(), # count
+              se_size = sd_size/sqrt(n)) %>% # standard error
+    mutate_at(vars(mean_size, sd_size, se_size), # bonus line to reduce digits
+              .funs = round, 2) 
+  
+  Size_summary %>% 
+    select(-Survey_Date) %>%
+    knitr::kable()
 ```
 
 #### Example creating a plot from that summary data:
 
 ```{r}
-Size_summary  + 
-  aes(x = , y = , fill = ) + 
-#  geom_point(position = position_dodge(0.9)) +
-geom_col() +
-  geom_errorbar(aes(, 
-                    ), 
-                position = , 
-                width = 
-                )
+Size_summary  |>  
+  ggplot() +
+  aes(x = as.factor(Survey_Date), y = mean_size, fill = Impact) + 
+  geom_point(position = position_dodge(0.9)) +
+  geom_col(position = position_dodge()) +
+    
+  geom_errorbar(ymin = mean_size - se_size, ymax = mean_size + se_size)
+
 ```
 
 #### Beyond the summary stats: frequency distributions
@@ -83,10 +82,13 @@ geom_col() +
 Boiling it down to the mean and standard deviation really loses a lot of information though. It's always good to look at the histogram/distribution to get a better sense of what's going on. Let's look back at just that one histogram.
 
 ```{r}
-CC_sp19 <-
-  filter(Season ==  Year == Impact == )
+CC_sp19 <- CCdata_tidy
+  filter(Season == "Spring" & Year == 2019 & Impact == "High")
 
 CC_sp19 %>%
+  ggplot() + 
+  aes(x = size) +
+  geom_histogram(aes(y = after_stat.density))
   
 ```
 
