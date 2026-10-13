@@ -43,6 +43,8 @@ Make a histogram with all the data.
 
 ```{r}
 ggplot(SizeData_2022_2025) +
+  aes(x = shell_length_mm) +
+  geom_histogram()
 
 ```
 
@@ -50,6 +52,10 @@ Make a histogram with a `facet_wrap()` to separate the data from each site and y
 
 ```{r}
 ggplot(SizeData_2022_2025) +
+  aes(x = shell_length_mm) +
+  geom_histogram() +
+  facet_wrap(site~year)
+
 
 ```
 
@@ -57,6 +63,7 @@ We know our minimum size cut-off varied in different years of the surveys, and s
 
 ```{r}
 SizeData_2022_2025 <- SizeData_2022_2025 |> 
+  filter(shell_length_mm > 15)
 ```
 
 ### 1.2 How long were the transects at each site?
@@ -65,8 +72,11 @@ Make a table using `select()` and `distinct()` to only show the length of each t
 
 ```{r}
 TransectLengths <- SizeData_2022_2025 |> 
-  
-  
+  select(site, transect_num, transect_length_m) |> 
+  distinct(.keep_all = TRUE) |> 
+  arrange(site, transect_num)
+
+
   
 
 TransectLengths
@@ -81,14 +91,16 @@ Visualize the transect lengths two different ways.
 - combine the two so that the points are red and overlay the boxplot graph.
 
 ```{r}
-TransectLengths |> ggplot() +
+TransectLengths |> ggplot(SizeData_2022_2025) + 
+  aes(x = site, y = transect_length_m) +
+  geom_boxplot()
 
   
 
 TransectLengths |> ggplot() +
-
-
-TransectLengths |> ggplot() +
+  
+  
+  TransectLengths |> ggplot() +
 
   
   
