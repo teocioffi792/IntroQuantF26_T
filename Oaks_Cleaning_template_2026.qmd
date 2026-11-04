@@ -1,6 +1,6 @@
 ---
-title: "Oaks_Cleaning_EDA_template"
-author: Amy King-Henry
+title: "Oaks_Cleaning_EDA_"
+author: Teo Cioffi
 datemodified: October 29, 2026
 format: html
 editor: visual
@@ -141,6 +141,12 @@ You may be either examining `SPAD_Data_Raw`, `Height_Data_Raw`, `LICOR_Data_Raw`
 
 ```{r}
 
+Height_Data_Raw |> 
+  count(Treatment)
+
+#There is very little measurements of soil moisture around natural recruits, 2/3 of the columns have NA values and must be excluded. NR treatment excluded from analysis
+Moist_Data_Raw |> 
+  count(Treatment)
 ```
 
 In this next chunk, generate a cleaned data set following the example below. As you examine your raw data and find things to fix, add a #Note to create a list of things to fix up. You can then use pipes and write code to fix each thing in your checklist. This is also where if you identified `filters` or data computations in your Hypothesis worksheet (e.g., choose only one species), you can apply those.
@@ -152,13 +158,24 @@ Read about joins here: <https://r4ds.hadley.nz/joins>
 Check out the illustrative animations on this page: <https://github.com/gadenbuie/tidyexplain?tab=readme-ov-file#mutating-joins>
 
 ```{r}
-Height_Data <- Height_Data_Raw |> 
+Soil_Moisture_Data <- Moist_Data_Raw |> 
+  #Grab only necessary columns for simplicity
+  select(Block, Treatment, VWC1_perc, VWC2_perc, VWC3_perc) |> 
+  #Make sure data columns are in numberic format
+  mutate(
+    VWC1_perc = as.numeric(VWC1_perc),
+    VWC2_perc = as.numeric(VWC2_perc),
+    VWC3_perc = as.numeric(VWC3_perc),
+    Soil_Moisture_Mean = (VWC1_perc + VWC2_perc + VWC3_perc) / 3
+  ) |> 
+  #Removes rows with NA values which aren't relevant to the data
+  drop_na(Treatment, Soil_Moisture_Mean) |> 
   
-  # use notes like this to create a checklist of the things that need to be fixed, then you can fill in code between each line as you fix them. 
-
-  # Thing to fix #2
-
-  # Thing to fix #3
+  #Filters out single NR treatment measurement row
+  filter(Treatment != "NR") |> 
+  
+  #Converts treatment to factor type for ANOVA
+  mutate(Treatment = as.factor(Treatment))
 ```
 
 ### Regression dataset
@@ -170,9 +187,61 @@ Repeat the steps you took for your ANOVA data for your second data set of choice
 ```
 
 ```{r}
-Data <- _Raw |> 
-   
-  #Things to Fix
+Height_Data <- Height_Data_Raw |> 
+  mutate(Seedling_Ht_cm = as.numeric(Seedling_Ht_cm)) |> 
+  #Filter out dead seedlings
+  filter(Dead_Alive == "Alive") |> 
+  
+  #Filter out SA and NR treatments
+  filter(Treatment != "SA") |> 
+  filter(Treatment != "NR") |> 
+  
+  #Convert open space treatment rows labelled "OA" to their correct notation
+  mutate(
+    Treatment = case_when(
+      Treatment == "OA" ~ "OS",
+      TRUE ~ Treatment
+    ),
+    Treatment = as.factor(Treatment),
+    Dead_Alive = as.factor(Dead_Alive),
+    Seedling_Ht_cm = as.numeric(Seedling_Ht_cm)
+  ) |> 
+  #Remove any rows with NA values in their columns instead of actual data
+  drop_na(Seedling_Ht_cm)
+
+
+Regression_Data <- Soil_Moisture_Data |> 
+  #Join moisture data and height data together by block and treatment
+  inner_join(Height_Data, by = c("Block", "Treatment")) |> 
+  select(Block, Treatment, Tag_Num, Soil_Moisture_Mean, Seedling_Ht_cm) |> 
+  #Extra check for any more rows without data values
+  drop_na(Soil_Moisture_Mean, Seedling_Ht_cm)
+
+#Dataset showing the counts of alive and dead seedlings for each treatment
+Establishment_Data <- Height_Data_Raw |> 
+  filter(Treatment != "SA") |> 
+  filter(Treatment != "NR") |> 
+  mutate(
+    Treatment = case_when(
+      Treatment == "OA" ~ "OS",
+      TRUE ~ Treatment
+    ),
+    #Converts treatment and seedling life status into categorical variable types for models
+    Treatment = as.factor(Treatment),
+    Dead_Alive = as.factor(Dead_Alive),
+    
+    #Ensures seedling heights are in proper numeric form
+    Seedling_Ht_cm = as.numeric(Seedling_Ht_cm)
+  ) |> 
+  drop_na(Treatment, Dead_Alive) |> 
+  group_by(Treatment, Dead_Alive) |> 
+  
+  #Summarizes the count of alive/dead seedlings for each treatment
+  summarize(count = n(), .groups = "drop")
+Establishment_Data
+
+Soil_Moisture_Data |> 
+  count(Treatment)
 ```
 
 ## Exploratory Data Analysis
@@ -192,5 +261,84 @@ Not sure where to start?
 Go for it!
 
 ```{r}
+#Graphs 1 and 2: Boxplots of soil moisture by habitat treatment
+ggplot(Soil_Moisture_Data, aes(x = Treatment, y = Soil_Moisture_Mean, fill = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1.5, color = "black") +
+  labs(
+    title = "Soil Moisture Across Habitat Treatments",
+    x = "Habitat Treatment",
+    y = "Mean Volumetric Water Content (%)"
+  ) +
+  theme(legend.position = "none")
 
+ggplot(Soil_Moisture_Data, aes(x = Treatment, y = Soil_Moisture_Mean, fill = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(
+    title = "Soil Moisture Across Habitat Treatments",
+    x = "Habitat Treatment",
+    y = "Mean Volumetric Water Content (%)"
+  ) +
+  theme(legend.position = "none")
+
+#Graph 3: Soil moisture by block, check if spatial gradient is present
+ggplot(Soil_Moisture_Data, aes(x = factor(Block), y = Soil_Moisture_Mean, fill = factor(Block))) +
+  geom_boxplot() +
+  labs(
+    title = "Soil Moisture Variation Across Sampling Blocks",
+    x = "Block Number",
+    y = "Mean Soil Moisture (VWC %)"
+  ) +
+  theme(legend.position = "none")
+
+
+#Graph 4: Scatterplot of soil moisture vs seedling height with fitted regression line
+ggplot(Regression_Data, aes(x = Soil_Moisture_Mean, y = Seedling_Ht_cm)) +
+  geom_point(color = "black", size = 2) +
+  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  labs(
+    title = "Oak Seedling Height vs. Soil Moisture",
+    x = "Mean Soil Moisture (VWC %)",
+    y = "Seedling Height (cm)"
+  )
+
+#Graph 5: Facet wrap 
+ggplot(Regression_Data, aes(x = Soil_Moisture_Mean, y = Seedling_Ht_cm, color = Treatment)) +
+  geom_point(size = 2) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ Treatment) +
+  labs(
+    title = "Height vs. Soil Moisture Faceted by Habitat Treatment",
+    x = "Mean Soil Moisture (VWC %)",
+    y = "Seedling Height (cm)"
+  ) +
+  theme(legend.position = "none")
+
+#Graph 6: Alive vs Dead seedlings at each treatment
+ggplot(Establishment_Data, aes(x = Treatment, y = count, fill = Dead_Alive)) +
+  geom_col(position = "dodge", color = "black") +
+  labs(
+    title = "Oak Seedling Establishment by Treatment",
+    subtitle = "Comparing counts of surviving vs. dead seedlings",
+    x = "Habitat Treatment",
+    y = "Number of Seedlings",
+    fill = "Survival Status"
+  ) +
+  scale_fill_manual(values = c("Alive" = "lightgreen", "Dead" = "darkred"))
+
+#Results of ANOVA and Regression
+SM_ANOVA <- aov(Soil_Moisture_Mean ~ Treatment, data = Soil_Moisture_Data)
+summary(SM_ANOVA)
+
+Height_Moisture_Regression <- lm(
+  Seedling_Ht_cm ~ Soil_Moisture_Mean, data = Regression_Data)
+summary(Height_Moisture_Regression)
 ```
+
+While exploring the data, the lack of soil moisture measurements for the open recruits treatment meant that it had to be excluded from analysis, thus the three treatments examined were open space, adult canopy, and dead tree. The ANOVA dataset was used to answer the question of whether or not there was a significant difference in mean soil moisture among the treatment groups. The regression dataset was used to answer to what extent soil moisture could predict seedling height. In both cases the ANOVA and regression failed to reject the null hypothesis of no significance.
+
+This lack of significance is similarly reflected in the graphs 1 and 2 of soil moisture boxplots across the three treatments. The interquartile ranges of all three overlap heavily, as well as their whiskers. Graph 3 was used to check if there was any sort of spatial gradient for soil moisture present across the blocks, which was confirmed. Blocks 1, 2, 3, and 4 were geographically close while blocks 5, 6, 7, and 8 were geographically close. This was reflected in the third graph, which showed each block's respective box plot hovering at a similar range as it's nearby blocks.
+
+The fourth graph looked at mean soil moisture against seedling height across all three treatments, which had a roughly horizontal regression line indicating no overall significance. However the 5th graph, which looked mean soil moisture against seedling height for each individual treatment, revealed noticably different trend lines. The adult canopy/dead tree treatments saw mean soil moisture positively correlated with tree height, wheras the trend line for the open space treatment had a negative slope, indicating negative correlation.
+
+To see if survivorship bias was influencing the results of the data, counts of surviving seedlings and dead seedlings were graphed for each site. The greatest discrepancy between treatments appears to be the adult canopy and open space treatments. Adult canopy had roughly 30% more alive trees than dead, while the open space treatment saw the inverse, with more dead trees recorded than alive.
