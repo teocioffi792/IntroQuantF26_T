@@ -1,0 +1,250 @@
+---
+title: "Rough_Draft_Oaks_Analysis"
+format: html
+---
+
+**Load Your Packages**
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+**Read in Your Data**
+
+```{r}
+Height_Data_Raw <- 
+  read_excel("Oak Data Entry MCRS Field Trip.xlsx", 
+             sheet = "Seedling Heights")
+
+Moist_Data_Raw <- 
+  read_excel("Oak Data Entry MCRS Field Trip.xlsx", 
+             sheet = "Soil Moisture")
+
+SPAD_Data_Raw <- 
+  read_excel("Oak Data Entry MCRS Field Trip.xlsx", 
+             sheet = "SPAD", 
+             na = "NA")
+```
+
+**Data Cleaning for Anova Dataset**
+
+```{r}
+Soil_Moisture_Data <- Moist_Data_Raw |> 
+  #Grab only necessary columns for simplicity
+  select(Block, Treatment, VWC1_perc, VWC2_perc, VWC3_perc) |> 
+  #Make sure data columns are in numberic format
+  mutate(
+    VWC1_perc = as.numeric(VWC1_perc),
+    VWC2_perc = as.numeric(VWC2_perc),
+    VWC3_perc = as.numeric(VWC3_perc),
+    Soil_Moisture_Mean = (VWC1_perc + VWC2_perc + VWC3_perc) / 3
+  ) |> 
+  #Removes rows with NA values which aren't relevant to the data
+  drop_na(Treatment, Soil_Moisture_Mean) |> 
+  
+  #Filters out single NR treatment measurement row
+  filter(Treatment != "NR") |> 
+  
+  #Converts treatment to factor type for ANOVA
+  mutate(Treatment = as.factor(Treatment))
+```
+
+**Data Cleaning for Regression Dataset**
+
+```{r}
+Height_Data <- Height_Data_Raw |> 
+  mutate(Seedling_Ht_cm = as.numeric(Seedling_Ht_cm)) |> 
+  #Filter out dead seedlings
+  filter(Dead_Alive == "Alive") |> 
+  
+  #Filter out SA and NR treatments
+  filter(Treatment != "SA") |> 
+  filter(Treatment != "NR") |> 
+  
+  #Convert open space treatment rows labelled "OA" to their correct notation
+  mutate(
+    Treatment = case_when(
+      Treatment == "OA" ~ "OS",
+      TRUE ~ Treatment
+    ),
+    Treatment = as.factor(Treatment),
+    Dead_Alive = as.factor(Dead_Alive),
+    Seedling_Ht_cm = as.numeric(Seedling_Ht_cm)
+  ) |> 
+  #Remove any rows with NA values in their columns instead of actual data
+  drop_na(Seedling_Ht_cm)
+
+
+Regression_Data <- Soil_Moisture_Data |> 
+  #Join moisture data and height data together by block and treatment
+  inner_join(Height_Data, by = c("Block", "Treatment")) |> 
+  select(Block, Treatment, Tag_Num, Soil_Moisture_Mean, Seedling_Ht_cm) |> 
+  #Extra check for any more rows without data values
+  drop_na(Soil_Moisture_Mean, Seedling_Ht_cm)
+
+#Dataset showing the counts of alive and dead seedlings for each treatment
+Establishment_Data <- Height_Data_Raw |> 
+  filter(Treatment != "SA") |> 
+  filter(Treatment != "NR") |> 
+  mutate(
+    Treatment = case_when(
+      Treatment == "OA" ~ "OS",
+      TRUE ~ Treatment
+    ),
+    #Converts treatment and seedling life status into categorical variable types for models
+    Treatment = as.factor(Treatment),
+    Dead_Alive = as.factor(Dead_Alive),
+    
+    #Ensures seedling heights are in proper numeric form
+    Seedling_Ht_cm = as.numeric(Seedling_Ht_cm)
+  ) |> 
+  drop_na(Treatment, Dead_Alive) |> 
+  group_by(Treatment, Dead_Alive) |> 
+  
+  #Summarizes the count of alive/dead seedlings for each treatment
+  summarize(count = n(), .groups = "drop")
+Establishment_Data
+
+Soil_Moisture_Data |> 
+  count(Treatment)
+```
+
+\
+**Summary Table**
+
+```{r}
+summary_table <- Regression_Data |> 
+  group_by(Treatment) |> #organized by treatment
+  summarise( #Calculate summary statistics for soil moisture and seedling height
+    Sample_Size      = n(),
+    Mean_Soil_Moist  = mean(Soil_Moisture_Mean, na.rm = TRUE),
+    SD_Soil_Moist    = sd(Soil_Moisture_Mean, na.rm = TRUE),
+    SE_Soil_Moist    = sd(Soil_Moisture_Mean, na.rm = TRUE) / sqrt(n()),
+    
+    Mean_Seedling_Ht = mean(Seedling_Ht_cm, na.rm = TRUE),
+    SD_Seedling_Ht   = sd(Seedling_Ht_cm, na.rm = TRUE),
+    SE_Seedling_Ht   = sd(Seedling_Ht_cm, na.rm = TRUE) / sqrt(n())
+  )
+
+# Display the summary table
+summary_table
+```
+
+**ANOVA Analysis**
+
+```{r}
+#This code creates a linear model for analysis
+soil_model = lm(Soil_Moisture_Mean ~ Treatment + factor(Block), data = Soil_Moisture_Data)
+
+
+# Normality of Residuals
+plot(soil_model, which = 2) # Q-Q Plot
+shapiro.test(soil_model$residuals) # Shapiro-Wilk test
+
+# Bartlett Test of Homogeneity of Variances
+bartlett.test(Soil_Moisture_Mean ~ Treatment, data = Soil_Moisture_Data)
+```
+
+```{r}
+# ANOVA Statistical Test (with Treatment and Blocking)
+soil_anova <- aov(Soil_Moisture_Mean ~ Treatment + factor(Block), data = Soil_Moisture_Data)
+summary(soil_anova)
+```
+
+```{r}
+#Nice Graph
+#Graphs 1 and 2: Boxplots of soil moisture by habitat treatment
+ggplot(Soil_Moisture_Data, aes(x = Treatment, y = Soil_Moisture_Mean, fill = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1.5, color = "black") +
+  labs(
+    title = "Soil Moisture Across Habitat Treatments",
+    x = "Habitat Treatment",
+    y = "Mean Volumetric Water Content (%)"
+  ) +
+  theme(legend.position = "none")
+
+ggplot(Soil_Moisture_Data, aes(x = Treatment, y = Soil_Moisture_Mean, fill = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(
+    title = "Soil Moisture Across Habitat Treatments",
+    x = "Habitat Treatment",
+    y = "Mean Volumetric Water Content (%)"
+  ) +
+  theme(legend.position = "none")
+
+#Graph 3: Soil moisture by block, check if spatial gradient is present
+ggplot(Soil_Moisture_Data, aes(x = factor(Block), y = Soil_Moisture_Mean, fill = factor(Block))) +
+  geom_boxplot() +
+  labs(
+    title = "Soil Moisture Variation Across Sampling Blocks",
+    x = "Block Number",
+    y = "Mean Soil Moisture (VWC %)"
+  ) +
+  theme(legend.position = "none")
+
+```
+
+**Regression Analysis**
+
+```{r}
+
+# Create linear model
+height_reg <- lm(Seedling_Ht_cm ~ Soil_Moisture_Mean, data = Regression_Data)
+
+#Check linear regression assumptions, Residuals vs Fitted plot
+plot(height_reg, which = 1)
+
+# Normality of Residuals (Q-Q Plot and Shapiro-Wilk Test)
+plot(height_reg, which = 2)
+shapiro.test(residuals(height_reg))
+
+
+```
+
+```{r}
+# Summary of linear model output (slope, intercept, R squared, and p value)
+summary(height_reg)
+
+```
+
+```{r}
+#Mean Soil Moisture vs Seedling Height
+ggplot(Regression_Data, aes(x = Soil_Moisture_Mean, y = Seedling_Ht_cm)) +
+  geom_point(color = "black", size = 1) +
+  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  labs(
+    title = "Oak Seedling Height vs. Soil Moisture",
+    x = "Mean Soil Moisture (VWC %)",
+    y = "Seedling Height (cm)"
+  )
+
+ggplot(Height_Data, aes(x = Treatment, y = Seedling_Ht_cm, fill = Treatment)) +
+  # Add boxplots to show distribution and median
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+  # Add individual raw data points with jitter for transparency
+  geom_jitter(width = 0.2, size = 1.5, color = "black", alpha = 0.5) +
+  labs(
+    title = "Oak Seedling Height Across Habitat Treatments",
+    x = "Habitat Treatment",
+    y = "Seedling Height (cm)"
+  ) +
+  theme_classic() +
+  theme(legend.position = "none")
+
+# Bar chart of oak seedling establishment (survival vs. mortality) by treatment
+ggplot(Establishment_Data, aes(x = Treatment, y = count, fill = Dead_Alive)) +
+  geom_col(position = "dodge", color = "black") +
+  scale_fill_manual(
+    values = c("Alive" = "lightgreen", "Dead" = "darkred"),
+    name = "Status"
+    
+  ) +
+  labs(
+    title = "Oak Seedling Establishment by Habitat Treatment",
+    subtitle = "Counts of surviving (Alive) vs. non-surviving (Dead) seedlings",
+    x = "Habitat Treatment",
+    y = "Number of Seedlings"
+  )
+```
